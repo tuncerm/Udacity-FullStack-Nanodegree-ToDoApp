@@ -1,12 +1,18 @@
 <html>
     <head>
         <title>Todo App</title>
+        <style>
+            #error {
+                display: none;
+            }
+        </style>
     </head>
     <body>
 {#        <form method="post" action="/todos/create">#}
 {#            <input type="text" name="description" />#}
 {#            <input type="submit" value="Create" />#}
 {#        </form>#}
+        <div id="error" class="hidden">Something went wrong!</div>
         <form id="form">
             <input id="description" type="text" name="description" />
             <input type="submit" value="Create" />
@@ -33,12 +39,15 @@
                 })
                 .then(response=>response.json())
                 .then(data=>{
+                    document.getElementById('error').className = 'hidden';
                     const li = document.createElement('li');
                     li.innerText = data.description;
                     list.append(li);
                     inputElement.value = '';
                 })
-                .catch(console.log)
+                .catch(()=>{
+                    document.getElementById('error').className = '';
+                })
             }
         </script>
     </body>
