@@ -5,13 +5,31 @@
             #error {
                 display: none;
             }
+            #list{
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                width: 200px;
+            }
+            #list li {
+                clear: both;
+            }
+            #list li button{
+                -webkit-appearance: none;
+                border: none;
+                outline: none;
+                color: red;
+                float: right;
+                cursor: pointer;
+                font-size: 20px;
+            }
+            .lists-wrapper, .todos-wrapper {
+                display: inline-block;
+                vertical-align: top;
+            }
         </style>
     </head>
     <body>
-{#        <form method="post" action="/todos/create">#}
-{#            <input type="text" name="description" />#}
-{#            <input type="submit" value="Create" />#}
-{#        </form>#}
         <div id="error" class="hidden">Something went wrong!</div>
         <form id="form">
             <input id="description" type="text" name="description" />
@@ -19,10 +37,60 @@
         </form>
         <ul id="list">
             {% for todo in data %}
-                <li>{{ todo.description }}</li>
+                <li>
+                    <input class="check-completed" data-id="{{ todo.id }}" type="checkbox" {% if todo.completed %} checked {% endif %} />
+                    {{ todo.description }}
+                    <button class="todo-delete-button" data-id="{{ todo.id }}">&cross;</button>
+                </li>
             {% endfor %}
         </ul>
         <script>
+            const cbChange = (e) => {
+                const completed = e.target.checked;
+                const url = '/todos/' + e.target.dataset['id'];
+                fetch(url, {
+                    method:"PUT",
+                    body:JSON.stringify({completed}),
+                    headers:{'Content-Type': 'application/json'}
+                })
+                .then(res=>res.json())
+                .then(function(data){
+                    if(data.ok) {
+                        document.getElementById('error').className = 'hidden';
+                    } else {
+                        e.target.checked = !completed;
+                    }
+                })
+                .catch(function(){
+                    e.target.checked = !completed;
+                    document.getElementById('error').className = '';
+                })
+            };
+            const btClick = (e) => {
+                const url = '/todos/' + e.target.dataset['id'];
+                fetch(url, {
+                    method:"DELETE"
+                })
+                .then(res => res.json())
+                .then(function(data){
+                    if (data.ok){
+                        document.getElementById('error').className = 'hidden';
+                        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+                    }
+                })
+                .catch(function(){
+                    document.getElementById('error').className = '';
+                })
+            };
+            const checkboxes = document.getElementsByClassName('check-completed');
+            for (let item of checkboxes ){
+                item.onchange = cbChange;
+            }
+            const buttons = document.getElementsByClassName('todo-delete-button');
+            for (let button of buttons){
+                button.onclick = btClick;
+            }
+
             const list = document.getElementById('list');
             const form = document.getElementById('form');
             form.onsubmit = function (e) {
@@ -41,7 +109,19 @@
                 .then(data=>{
                     document.getElementById('error').className = 'hidden';
                     const li = document.createElement('li');
-                    li.innerText = data.description;
+                    const cb = document.createElement('input');
+                    const btn = document.createElement('button');
+                    btn.innerHTML = '&cross;';
+                    btn.setAttribute('data-id', data.id);
+                    btn.className = 'todo-delete-button';
+                    btn.onclick = btClick;
+                    cb.type = 'checkbox';
+                    cb.setAttribute('data-id', data.id);
+                    cb.onchange = cbChange;
+                    cb.className = "check-completed";
+                    li.append(cb);
+                    li.append(data.description);
+                    li.append(btn);
                     list.append(li);
                     inputElement.value = '';
                 })

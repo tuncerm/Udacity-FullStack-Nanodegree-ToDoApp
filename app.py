@@ -27,7 +27,7 @@ class Todo(db.Model):
 
 @app.route('/')
 def index():
-    return render_template('index.html', data=Todo.query.all())
+    return render_template('index.html', data=Todo.query.order_by('id').all())
 
 
 @app.route('/todos/create', methods=['POST'])
@@ -35,9 +35,11 @@ def create_todo():
     error = False
     description = request.get_json()['description']
     todo = Todo(description=description)
+    todoId = ''
     try:
         db.session.add(todo)
         db.session.commit()
+        todoId = todo.id
     except:
         db.session.rollback()
         print(sys.exc_info())
@@ -45,7 +47,31 @@ def create_todo():
     finally:
         db.session.close()
     if not error:
-        return jsonify({'description': description})
+        return jsonify({'description': description, 'id': todoId})
+
+
+@app.route('/todos/<todo_id>', methods=['PUT', 'DELETE'])
+def set_completed_todo(todo_id):
+    if request.method == "PUT":
+        try:
+            completed = request.get_json()['completed']
+            todo = Todo.query.get(todo_id)
+            todo.completed = completed
+            db.session.commit()
+        except:
+            db.session.rollback()
+        finally:
+            db.session.close()
+    else:
+        try:
+            Todo.query.filter_by(id=todo_id).delete()
+            db.session.commit()
+        except:
+            db.session.rollback()
+        finally:
+            db.session.close()
+    # return redirect(url_for('index'))
+    return jsonify({'ok': True})
 
 if __name__ == '__main__':
     app.run()
