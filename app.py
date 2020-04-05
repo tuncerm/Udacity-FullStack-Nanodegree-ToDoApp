@@ -1,5 +1,5 @@
 import sys
-from flask import Flask, render_template, request, jsonify, abort
+from flask import Flask, render_template, request, jsonify, abort, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
@@ -32,12 +32,13 @@ class Todo(db.Model):
         return f'<Todo {self.id}, {self.description}, list {self.list_id}>'
 
 
-
-
-
 @app.route('/')
 def index():
-    return render_template('index.html', todos=Todo.query.order_by('id').all())
+    return redirect(url_for('get_list_todos', list_id=1))
+
+@app.route('/lists/<list_id>')
+def get_list_todos(list_id):
+    return render_template('index.html', todos=Todo.query.filter_by(list_id=list_id).order_by('id').all())
 
 
 @app.route('/todos', methods=['POST'])
@@ -87,6 +88,7 @@ def set_completed_todo(todo_id):
             db.session.close()
 
     return jsonify({'ok': True})
+
 
 if __name__ == '__main__':
     app.run()
