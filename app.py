@@ -1,15 +1,24 @@
 import sys
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todos.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://tuncerm@localhost:5432/tuncerm'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)  # session_options={"expire_on_commit": False}
-
+db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+
+class TodoList(db.Model):
+    __tablename__ = 'todolists'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(), nullable=False)
+    todos = db.relationship('Todo', backref='list', lazy=True)
+
+    def __repr__(self):
+        return f'<TodoList {self.id} {self.name}>'
 
 
 class Todo(db.Model):
@@ -17,37 +26,43 @@ class Todo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(), nullable=False)
     completed = db.Column(db.Boolean, nullable=False, default=False)
+    list_id = db.Column(db.Integer, db.ForeignKey('todolists.id'), nullable=False)
 
     def __repr__(self):
-        return f'<Todo {self.id}, {self.description}>'
+        return f'<Todo {self.id}, {self.description}, list {self.list_id}>'
 
 
-#db.create_all()
+
 
 
 @app.route('/')
 def index():
-    return render_template('index.html', data=Todo.query.order_by('id').all())
+    return render_template('index.html', todos=Todo.query.order_by('id').all())
 
 
-@app.route('/todos/create', methods=['POST'])
+@app.route('/todos', methods=['POST'])
 def create_todo():
     error = False
     description = request.get_json()['description']
     todo = Todo(description=description)
-    todoId = ''
+    body = {}
     try:
         db.session.add(todo)
         db.session.commit()
-        todoId = todo.id
+        body['id'] = todo.id
+        body['completed'] = todo.completed
+        body['description'] = todo.description
     except:
         db.session.rollback()
         print(sys.exc_info())
         error = True
     finally:
         db.session.close()
-    if not error:
-        return jsonify({'description': description, 'id': todoId})
+
+    if error:
+        abort(400)
+    else:
+        return jsonify(body)
 
 
 @app.route('/todos/<todo_id>', methods=['PUT', 'DELETE'])
@@ -70,7 +85,7 @@ def set_completed_todo(todo_id):
             db.session.rollback()
         finally:
             db.session.close()
-    # return redirect(url_for('index'))
+
     return jsonify({'ok': True})
 
 if __name__ == '__main__':

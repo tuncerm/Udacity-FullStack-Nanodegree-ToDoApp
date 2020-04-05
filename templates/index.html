@@ -2,7 +2,7 @@
     <head>
         <title>Todo App</title>
         <style>
-            #error {
+            .hidden {
                 display: none;
             }
             #list{
@@ -36,7 +36,7 @@
             <input type="submit" value="Create" />
         </form>
         <ul id="list">
-            {% for todo in data %}
+            {% for todo in todos %}
                 <li>
                     <input class="check-completed" data-id="{{ todo.id }}" type="checkbox" {% if todo.completed %} checked {% endif %} />
                     {{ todo.description }}
@@ -75,7 +75,7 @@
                 .then(function(data){
                     if (data.ok){
                         document.getElementById('error').className = 'hidden';
-                        e.target.parentNode.parentNode.removeChild(e.target.parentNode);
+                        e.target.parentElement.remove()
                     }
                 })
                 .catch(function(){
